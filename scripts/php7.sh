@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
-./run.sh -pv7 ${@}
+$(realpath $(dirname $0))/run.sh -v 7 php ${@}
 

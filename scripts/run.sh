@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 usage() {
-  echo -e "Usage:\n  ${0} [-v =5.6] [-r =$(pwd)] [-h] [-p]\n  -v: Version of php to run (5.4, 5.5, 5.6, 7)\n  -r: root folder of the application\n  -h: This info text\n  -p: Behave like a PHP binary";
+  echo -e "Usage:\n  ${0} [-v =5.6] [-r =$(pwd)] [-h] [-p]\n  -v: Version of php to run (5.4, 5.5, 5.6, 7)\n  -r: root folder of the application\n  -h: This info text";
 }
 
-while getopts pv:r:h o; do
+while getopts v:r:h o; do
   case ${o} in
     v|--version)
       VERSION="$OPTARG"
@@ -20,10 +20,6 @@ while getopts pv:r:h o; do
       ROOT="$OPTARG"
       shift 2
       ;;
-    p|--php)
-      PHPMODE=1
-      shift 1
-      ;;
     h|--help)
       usage
       exit 0
@@ -37,14 +33,7 @@ done
 
 ROOT="${ROOT:="$(pwd)"}"
 VERSION="${VERSION:="5.6"}"
-PHPMODE="${PHPMODE:="0"}"
-
-if [ "${PHPMODE}" = "1" ]; then
-CMD="php ${@}"
-echo "phpmode enabled!"
-else
 CMD="${@}"
-fi
 
 echo "Starting PHP ${VERSION} in '${ROOT}' with CMD: '${CMD}'"
 docker run -itp 80:80 -p 443:443 -v "${ROOT}:${ROOT}:rw" -w "${ROOT}" php-env:${VERSION} ${CMD}
