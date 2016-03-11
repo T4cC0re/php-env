@@ -1,4 +1,4 @@
-FROM php:5.6-apache
+FROM php:7-apache
 MAINTAINER Hendrik 'Xendo' Meyer <mail@xendo.net>
 
 ARG DocRoot=/srv/www/www
