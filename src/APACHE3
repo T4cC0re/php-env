@@ -1,0 +1,2 @@
+ADD ./default.html ${DocRoot}/index.html
+WORKDIR ${DocRoot}
