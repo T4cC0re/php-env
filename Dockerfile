@@ -1,15 +1,48 @@
 FROM php:5.6-apache
-MAINTAINER Hendrik 'Xendo' Meyer <mail@xendo.net>
+MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>
 
-ARG DocRoot=/srv/www/www
+# Apache doc-root
+ARG DocRoot="/srv/www/www"
 
-RUN apt-get update &&\
-  apt-get install -y libmcrypt-dev zlib1g-dev &&\
-  docker-php-ext-install sockets mcrypt mbstring zip &&\
-  echo 'date.timezone = "UTC"' >> /usr/local/etc/php/php.ini &&\
-  mkdir -p /srv/www/www &&\
-  sed -ir "s;<Directory /var/www/>;<Directory ${DocRoot}>;gm" /etc/apache2/apache2.conf &&\
-  sed -ir "s;DocumentRoot /var/www/html;DocumentRoot ${DocRoot};gm" /etc/apache2/apache2.conf
+# deleted after build:
+ARG buildDeps=""
+
+# kept after build:
+ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev"
+
+# PHP extensions to build and register:
+ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
+
+# Xdebug stuff
+ARG XDEBUG_VERSION="2.4.0"
+ARG XDEBUG_SHA1="a9bc9c6b9e8bc913fb1f7c6f6d19f6222d430414"
+
+RUN set -x\
+  && apt-get update\
+  && apt-get install -y $buildDeps $packages libgeoip-dev\
+  && docker-php-ext-install $extensions\
+  && pecl install geoip\
+    && echo "extension=geoip.so" > /usr/local/etc/php/conf.d/ext-geoip.ini\
+  && curl -SL "http://www.xdebug.org/files/xdebug-$XDEBUG_VERSION.tgz" -o xdebug.tgz\
+    && echo $XDEBUG_SHA1 xdebug.tgz | sha1sum -c -\
+    && mkdir -p /usr/src/xdebug\
+    && tar -xf xdebug.tgz -C /usr/src/xdebug --strip-components=1\
+    && rm xdebug.*\
+    && cd /usr/src/xdebug\
+    && phpize\
+    && ./configure\
+    && make -j"$(nproc)"\
+    && make install\
+    && make clean\
+    && echo "zend_extension=xdebug.so" > /usr/local/etc/php/conf.d/ext-xdebug.ini\
+  && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"\
+    && php composer-setup.php -- --install-dir=/bin --filename composer\
+    && rm -rf composer-setup.php\
+  && echo 'date.timezone = "UTC"' >> /usr/local/etc/php/php.ini\
+  && mkdir -p ${DocRoot}\
+    && sed -ir "s;<Directory /var/www/>;<Directory ${DocRoot}>;gm" /etc/apache2/apache2.conf\
+    && sed -ir "s;DocumentRoot /var/www/html;DocumentRoot ${DocRoot};gm" /etc/apache2/apache2.conf\
+  && apt-get purge -y --auto-remove $buildDeps\
+    && rm -rf /var/lib/apt/lists/*
 ADD ./default.html ${DocRoot}/index.html
 WORKDIR ${DocRoot}
-
