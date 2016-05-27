@@ -71,28 +71,30 @@ generate7-apache: check
 	sed -i "s/%APACHE3%//g" Dockerfile7-apache
 
 php5.4-cli: check generate5.4-cli
-	docker build -t php-env:5.4-cli $(OPTS) -f Dockerfile5.4-cli .
+	docker build -t t4cc0re/php-env:5.4-cli $(OPTS) -f Dockerfile5.4-cli .
 php5.5-cli: check generate5.5-cli
-	docker build -t php-env:5.5-cli $(OPTS) -f Dockerfile5.5-cli .
+	docker build -t t4cc0re/php-env:5.5-cli $(OPTS) -f Dockerfile5.5-cli .
 php5.6-cli: check generate5.6-cli
-	docker build -t php-env:5.6-cli $(OPTS) -f Dockerfile5.6-cli .
+	docker build -t t4cc0re/php-env:5.6-cli $(OPTS) -f Dockerfile5.6-cli .
 php7-cli: check generate7-cli
-	docker build -t php-env:7-cli $(OPTS) -f Dockerfile7-cli .
+	docker build -t t4cc0re/php-env:7-cli $(OPTS) -f Dockerfile7-cli .
 php5.4-apache: check generate5.4-apache
-	docker build -t php-env:5.4-apache $(OPTS) -f Dockerfile5.4-apache .
+	docker build -t t4cc0re/php-env:5.4-apache $(OPTS) -f Dockerfile5.4-apache .
 php5.5-apache: check generate5.5-apache
-	docker build -t php-env:5.5-apache $(OPTS) -f Dockerfile5.5-apache .
+	docker build -t t4cc0re/php-env:5.5-apache $(OPTS) -f Dockerfile5.5-apache .
 php5.6-apache: check generate5.6-apache
-	docker build -t php-env:5.6-apache $(OPTS) -f Dockerfile5.6-apache .
+	docker build -t t4cc0re/php-env:5.6-apache $(OPTS) -f Dockerfile5.6-apache .
 php7-apache: check generate7-apache
-	docker build -t php-env:7-apache $(OPTS) -f Dockerfile7-apache .
+	docker build -t t4cc0re/php-env:7-apache $(OPTS) -f Dockerfile7-apache .
 
 
 show:
-	docker images -a php-env; exit 0
+	docker images -a t4cc0re/php-env; exit 0
 
 
 clean:
-	docker rmi --force `docker images -q php-env` 2> /dev/null; exit 0
+	docker rmi --force `docker images -q t4cc0re/php-env` 2> /dev/null; exit 0
 	rm -f Dockerfile5.* Dockerfile7*; exit 0
 
+push:
+	docker push t4cc0re/php-env
