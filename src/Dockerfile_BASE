@@ -10,6 +10,9 @@ ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev"
 # PHP extensions to build and register:
 ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
 
+# from https://github.com/Zakay/geoip
+ARG GEOIP_VERSION="master"
+
 # Xdebug stuff
 ARG XDEBUG_VERSION="2.4.0"
 ARG XDEBUG_SHA1="a9bc9c6b9e8bc913fb1f7c6f6d19f6222d430414"
@@ -18,8 +21,6 @@ RUN set -x\
   && apt-get update\
   && apt-get install -y $buildDeps $packages libgeoip-dev\
   && docker-php-ext-install $extensions\
-  && pecl install geoip\
-    && echo "extension=geoip.so" > /usr/local/etc/php/conf.d/ext-geoip.ini\
   && curl -SL "http://www.xdebug.org/files/xdebug-$XDEBUG_VERSION.tgz" -o xdebug.tgz\
     && echo $XDEBUG_SHA1 xdebug.tgz | sha1sum -c -\
     && mkdir -p /usr/src/xdebug\
@@ -31,10 +32,20 @@ RUN set -x\
     && make -j"$(nproc)"\
     && make install\
     && make clean\
-    && echo "zend_extension=xdebug.so" > /usr/local/etc/php/conf.d/ext-xdebug.ini\
+  && curl -SL "https://github.com/Zakay/geoip/archive/$GEOIP_VERSION.tar.gz" -o geoip.tgz\
+    && mkdir -p /usr/src/geoip\
+    && tar -xf geoip.tgz -C /usr/src/geoip --strip-components=1\
+    && rm geoip.*\
+    && cd /usr/src/geoip\
+    && phpize\
+    && ./configure\
+    && make -j"$(nproc)"\
+    && make install\
   && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"\
     && php composer-setup.php -- --install-dir=/bin --filename composer\
     && rm -rf composer-setup.php\
   && echo 'date.timezone = "UTC"' >> /usr/local/etc/php/php.ini\%APACHE2%
   && apt-get purge -y --auto-remove $buildDeps\
-    && rm -rf /var/lib/apt/lists/*%APACHE3%
+    && rm -rf /var/lib/apt/lists/*
+RUN echo "zend_extension=$(find / -name xdebug.so | head -1)" > /usr/local/etc/php/conf.d/ext-xdebug.ini\
+  && echo "extension=$(find / -name geoip.so | head -1)" > /usr/local/etc/php/conf.d/ext-geoip.ini\%APACHE3%
