@@ -5,7 +5,7 @@ MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>%APACHE1%
 ARG buildDeps=""
 
 # kept after build:
-ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev"
+ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev libmemcached-dev"
 
 # PHP extensions to build and register:
 ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
@@ -17,9 +17,28 @@ ARG GEOIP_VERSION="master"
 ARG XDEBUG_VERSION="2.4.0"
 ARG XDEBUG_SHA1="a9bc9c6b9e8bc913fb1f7c6f6d19f6222d430414"
 
+# Xdebug stuff
+ARG MEMCACHED_BUILD_VERSION="5e42fa985b05cb1063a74a74ac14220d52652686"
+
 RUN set -x\
   && apt-get update\
-  && apt-get install -y $buildDeps $packages libgeoip-dev\
+  && apt-get install -y $buildDeps $packages\
+  && (\
+    pecl install memcached\
+    || (\
+      echo "PHP7, not using PECL"\
+      &&  curl -SL "https://github.com/php-memcached-dev/php-memcached/archive/$MEMCACHED_BUILD_VERSION.tar.gz" -o memcached.tgz\
+        && mkdir -p /usr/src/memcached\
+        && tar -xf memcached.tgz -C /usr/src/memcached --strip-components=1\
+        && rm memcached.*\
+        && cd /usr/src/memcached\
+        && phpize\
+        && ./configure\
+        && make -j"$(nproc)"\
+        && make install\
+        && make clean\
+      )\
+    )\
   && docker-php-ext-install $extensions\
   && curl -SL "http://www.xdebug.org/files/xdebug-$XDEBUG_VERSION.tgz" -o xdebug.tgz\
     && echo $XDEBUG_SHA1 xdebug.tgz | sha1sum -c -\
@@ -48,4 +67,5 @@ RUN set -x\
   && apt-get purge -y --auto-remove $buildDeps\
     && rm -rf /var/lib/apt/lists/*
 RUN echo "zend_extension=$(find / -name xdebug.so | head -1)" > /usr/local/etc/php/conf.d/ext-xdebug.ini\
-  && echo "extension=$(find / -name geoip.so | head -1)" > /usr/local/etc/php/conf.d/ext-geoip.ini\%APACHE3%
+  && echo "extension=$(find / -name geoip.so | head -1)" > /usr/local/etc/php/conf.d/ext-geoip.ini\
+  && echo "extension=$(find / -name memcached.so | head -1)" > /usr/local/etc/php/conf.d/ext-memcached.ini\%APACHE3%
