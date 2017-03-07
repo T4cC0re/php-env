@@ -5,7 +5,7 @@ MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>%APACHE1%
 ARG buildDeps=""
 
 # kept after build:
-ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev libmemcached-dev"
+ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev libmemcached-dev sudo subversion"
 
 # PHP extensions to build and register:
 ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
@@ -17,14 +17,17 @@ ARG GEOIP_VERSION="master"
 ARG XDEBUG_VERSION="2.4.0"
 ARG XDEBUG_SHA1="a9bc9c6b9e8bc913fb1f7c6f6d19f6222d430414"
 
-# Xdebug stuff
+# Memcached Stuff
+# PHP7
 ARG MEMCACHED_BUILD_VERSION="5e42fa985b05cb1063a74a74ac14220d52652686"
+# PHP5.X
+ARG MEMCACHED_PECL_VERSION="2.2.0"
 
 RUN set -x\
   && apt-get update\
   && apt-get install -y $buildDeps $packages\
   && (\
-    pecl install memcached\
+    pecl install -f memcached-${MEMCACHED_PECL_VERSION}\
     || (\
       echo "PHP7, not using PECL"\
       &&  curl -SL "https://github.com/php-memcached-dev/php-memcached/archive/$MEMCACHED_BUILD_VERSION.tar.gz" -o memcached.tgz\
