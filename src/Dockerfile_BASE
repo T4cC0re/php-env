@@ -10,59 +10,36 @@ ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev libmemcached-dev sudo su
 # PHP extensions to build and register:
 ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
 
-# from https://github.com/Zakay/geoip
-ARG GEOIP_VERSION="master"
+# geoip
+ARG GEOIP_VERSION="1.1.1"
 
-# Xdebug stuff
-ARG XDEBUG_VERSION="2.4.0"
-ARG XDEBUG_SHA1="a9bc9c6b9e8bc913fb1f7c6f6d19f6222d430414"
-
-# Memcached Stuff
-# PHP7
-ARG MEMCACHED_BUILD_VERSION="5e42fa985b05cb1063a74a74ac14220d52652686"
+# Xdebug
 # PHP5.X
-ARG MEMCACHED_PECL_VERSION="2.2.0"
+ARG XDEBUG_VERSION_5="2.4.1"
+# PHP7
+ARG XDEBUG_VERSION_7="2.5.1"
+
+# Memcached
+# PHP5.X
+ARG MEMCACHED_PECL_VERSION_5="2.2.0"
+# PHP7
+ARG MEMCACHED_PECL_VERSION_7="3.0.3"
 
 RUN set -x\
   && apt-get update\
   && apt-get install -y $buildDeps $packages\
   && (\
-    pecl install -f memcached-${MEMCACHED_PECL_VERSION}\
-    || (\
-      echo "PHP7, not using PECL"\
-      &&  curl -SL "https://github.com/php-memcached-dev/php-memcached/archive/$MEMCACHED_BUILD_VERSION.tar.gz" -o memcached.tgz\
-        && mkdir -p /usr/src/memcached\
-        && tar -xf memcached.tgz -C /usr/src/memcached --strip-components=1\
-        && rm memcached.*\
-        && cd /usr/src/memcached\
-        && phpize\
-        && ./configure\
-        && make -j"$(nproc)"\
-        && make install\
-        && make clean\
-      )\
+    php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
+    && pecl install -f memcached-${MEMCACHED_PECL_VERSION_5}\
+    || pecl install -f memcached-${MEMCACHED_PECL_VERSION_7}\
     )\
+  && (\
+    php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
+    && pecl install -f Xdebug-${XDEBUG_VERSION_5}\
+    || pecl install -f Xdebug-${XDEBUG_VERSION_7}\
+    )\
+  && pecl install -f geoip-${GEOIP_VERSION}\
   && docker-php-ext-install $extensions\
-  && curl -SL "http://www.xdebug.org/files/xdebug-$XDEBUG_VERSION.tgz" -o xdebug.tgz\
-    && echo $XDEBUG_SHA1 xdebug.tgz | sha1sum -c -\
-    && mkdir -p /usr/src/xdebug\
-    && tar -xf xdebug.tgz -C /usr/src/xdebug --strip-components=1\
-    && rm xdebug.*\
-    && cd /usr/src/xdebug\
-    && phpize\
-    && ./configure\
-    && make -j"$(nproc)"\
-    && make install\
-    && make clean\
-  && curl -SL "https://github.com/Zakay/geoip/archive/$GEOIP_VERSION.tar.gz" -o geoip.tgz\
-    && mkdir -p /usr/src/geoip\
-    && tar -xf geoip.tgz -C /usr/src/geoip --strip-components=1\
-    && rm geoip.*\
-    && cd /usr/src/geoip\
-    && phpize\
-    && ./configure\
-    && make -j"$(nproc)"\
-    && make install\
   && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"\
     && php composer-setup.php -- --install-dir=/bin --filename composer\
     && rm -rf composer-setup.php\
