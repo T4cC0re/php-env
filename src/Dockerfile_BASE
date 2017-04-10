@@ -5,7 +5,7 @@ MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>%APACHE1%
 ARG buildDeps=""
 
 # kept after build:
-ARG packages="git libmcrypt-dev zlib1g-dev libgeoip-dev libmemcached-dev sudo subversion"
+ARG packages="git libmcrypt-dev zlib1g-dev libsasl2-dev libgeoip-dev libmemcached-dev sudo subversion libmysqlclient-dev"
 
 # PHP extensions to build and register:
 ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
@@ -16,6 +16,7 @@ ARG GEOIP_VERSION="1.1.1"
 # Xdebug
 # PHP5.X
 ARG XDEBUG_VERSION_5="2.4.1"
+ARG XDEBUG_VERSION_LEGACY="2.2.7"
 # PHP7
 ARG XDEBUG_VERSION_7="2.5.1"
 
@@ -30,12 +31,20 @@ RUN set -x\
   && apt-get install -y $buildDeps $packages\
   && (\
     php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
-    && pecl install -f memcached-${MEMCACHED_PECL_VERSION_5}\
+    && (\
+	php -r 'if(version_compare(PHP_VERSION, "5.4.0","<")){exit (1);}'\
+       	&& pecl install -f memcached-${MEMCACHED_PECL_VERSION_5}\
+        || apt-get install -y php5-memcached\
+       )\
     || pecl install -f memcached-${MEMCACHED_PECL_VERSION_7}\
     )\
   && (\
     php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
-    && pecl install -f Xdebug-${XDEBUG_VERSION_5}\
+    && (\
+	php -r 'if(version_compare(PHP_VERSION, "5.4.0","<")){exit (1);}'\
+       	&& pecl install -f Xdebug-${XDEBUG_VERSION_5}\
+        || pecl install -f Xdebug-${XDEBUG_VERSION_LEGACY}\
+       )\
     || pecl install -f Xdebug-${XDEBUG_VERSION_7}\
     )\
   && pecl install -f geoip-${GEOIP_VERSION}\

@@ -4,7 +4,7 @@ build: check Dockerfile php
 
 
 php: php-cli php-apache
-php-cli: php5.4-cli php5.5-cli php5.6-cli php7-cli php7.1-cli
+php-cli: php5.3-cli php5.4-cli php5.5-cli php5.6-cli php7-cli php7.1-cli
 php-apache: php5.4-apache php5.5-apache php5.6-apache php7-apache php7.1-apache
 
 
@@ -18,6 +18,12 @@ check: src/Dockerfile_BASE src/APACHE1 src/APACHE2 src/APACHE3
 Dockerfile: Dockerfile-cli Dockerfile-apache
 Dockerfile-cli: Dockerfile5.4-cli Dockerfile5.5-cli Dockerfile5.6-cli Dockerfile7-cli Dockerfile7.1-cli
 Dockerfile-apache: Dockerfile5.4-apache Dockerfile5.5-apache Dockerfile5.6-apache Dockerfile7-apache Dockerfile7.1-apache
+
+Dockerfile5.3-cli: check
+	@sed -r 's;%IMAGE%;t4cc0re/legacy-php:5.3;g' src/Dockerfile_BASE > Dockerfile5.3-cli
+	@sed -ri 's/%APACHE1%//g' Dockerfile5.3-cli
+	@sed -ri 's/%APACHE2%//g' Dockerfile5.3-cli
+	@sed -ri 's/%APACHE3%//g' Dockerfile5.3-cli
 
 Dockerfile5.4-cli: check
 	@sed -r 's/%IMAGE%/php:5.4-cli/g' src/Dockerfile_BASE > Dockerfile5.4-cli
@@ -85,6 +91,9 @@ Dockerfile7.1-apache: check
 	@sed -i "/%APACHE3%/r src/APACHE3" Dockerfile7.1-apache
 	@sed -i "s/%APACHE3%//g" Dockerfile7.1-apache
 
+php5.3-cli: check Dockerfile5.3-cli
+	docker build -t t4cc0re/php-env:5.3-cli $(OPTS) -f Dockerfile5.3-cli .
+
 php5.4-cli: check Dockerfile5.4-cli
 	docker build -t t4cc0re/php-env:5.4-cli $(OPTS) -f Dockerfile5.4-cli .
 
@@ -132,6 +141,7 @@ push:
 	@docker push t4cc0re/php-env
 
 phpv:
+	docker run -it t4cc0re/php-env:5.3-cli php -v
 	docker run -it t4cc0re/php-env:5.4-cli php -v
 	docker run -it t4cc0re/php-env:5.5-cli php -v
 	docker run -it t4cc0re/php-env:5.6-cli php -v
