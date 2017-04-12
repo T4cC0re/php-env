@@ -1,14 +1,15 @@
-FROM %IMAGE%
-MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>%APACHE1%
+FROM ${IMAGE}
+MAINTAINER Hendrik 'T4cC0re' Meyer <mail@t4cc0.re>
+${APACHE1}
 
 # deleted after build:
-ARG buildDeps=""
+ARG extBuildDeps="libmcrypt-dev zlib1g-dev libsasl2-dev libgeoip-dev libmemcached-dev libmysqlclient-dev"
 
 # kept after build:
-ARG packages="git libmcrypt-dev zlib1g-dev libsasl2-dev libgeoip-dev libmemcached-dev sudo subversion libmysqlclient-dev"
+ARG packages="git sudo subversion libmcrypt4 geoip-bin libmemcached11 libmemcachedutil2"
 
 # PHP extensions to build and register:
-ARG extensions="sockets mcrypt mbstring zip pdo pdo_mysql"
+ARG php_extensions="sockets mcrypt mbstring zip pdo pdo_mysql "
 
 # geoip
 ARG GEOIP_VERSION="1.1.1"
@@ -28,33 +29,41 @@ ARG MEMCACHED_PECL_VERSION_7="3.0.3"
 
 RUN set -x\
   && apt-get update\
-  && apt-get install -y $buildDeps $packages\
+  && apt-get install -y $extBuildDeps $packages >/dev/null \
+  && docker-php-ext-install $php_extensions >/dev/null \
   && (\
-    php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
-    && (\
-	php -r 'if(version_compare(PHP_VERSION, "5.4.0","<")){exit (1);}'\
-       	&& pecl install -f memcached-${MEMCACHED_PECL_VERSION_5}\
-        || apt-get install -y php5-memcached\
+    php -r 'if(!version_compare(PHP_VERSION, 7,">=")){exit (1);}' \
+    && pecl install -f memcached-${MEMCACHED_PECL_VERSION_7} >/dev/null \
+    || (\
+      php -r 'if(!version_compare(PHP_VERSION, "5.4.0",">")){exit (1);}' \
+       	&& pecl install -f memcached-${MEMCACHED_PECL_VERSION_5} >/dev/null \
+        || apt-get install -y php5-memcached >/dev/null \
        )\
-    || pecl install -f memcached-${MEMCACHED_PECL_VERSION_7}\
     )\
   && (\
-    php -r 'if(version_compare(PHP_VERSION, 7,">=")){exit (1);}'\
-    && (\
-	php -r 'if(version_compare(PHP_VERSION, "5.4.0","<")){exit (1);}'\
-       	&& pecl install -f Xdebug-${XDEBUG_VERSION_5}\
-        || pecl install -f Xdebug-${XDEBUG_VERSION_LEGACY}\
+    php -r 'if(!version_compare(PHP_VERSION, 7,">=")){exit (1);}' \
+    && pecl install -f Xdebug-${XDEBUG_VERSION_7} >/dev/null \
+    || (\
+        php -r 'if(!version_compare(PHP_VERSION, "5.4.0",">")){exit (1);}' \
+       	&& pecl install -f Xdebug-${XDEBUG_VERSION_5} >/dev/null \
+        || pecl install -f Xdebug-${XDEBUG_VERSION_LEGACY} >/dev/null \
        )\
-    || pecl install -f Xdebug-${XDEBUG_VERSION_7}\
     )\
-  && pecl install -f geoip-${GEOIP_VERSION}\
-  && docker-php-ext-install $extensions\
-  && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"\
-    && php composer-setup.php -- --install-dir=/bin --filename composer\
-    && rm -rf composer-setup.php\
-  && echo 'date.timezone = "UTC"' >> /usr/local/etc/php/php.ini\%APACHE2%
-  && apt-get purge -y --auto-remove $buildDeps\
-    && rm -rf /var/lib/apt/lists/*
-RUN echo "zend_extension=$(find / -name xdebug.so | head -1)" > /usr/local/etc/php/conf.d/ext-xdebug.ini\
-  && echo "extension=$(find / -name geoip.so | head -1)" > /usr/local/etc/php/conf.d/ext-geoip.ini\
-  && echo "extension=$(find / -name memcached.so | head -1)" > /usr/local/etc/php/conf.d/ext-memcached.ini\%APACHE3%
+  && pecl install -f geoip-${GEOIP_VERSION} >/dev/null \
+  && (\
+    php -r 'if(!version_compare(PHP_VERSION, "5.3.2",">=")){exit (1);}' \
+    && (\
+        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+        && php composer-setup.php -- --install-dir=/bin --filename composer \
+        && rm -rf composer-setup.php \
+       )\
+    || echo "NOT installing composer, as PHP-version is too old!" \
+    )\
+  && echo 'date.timezone = "UTC"' >> /usr/local/etc/php/php.ini\
+  ${APACHE2} \
+  && apt-get purge -y --auto-remove $extBuildDeps >/dev/null \
+    && rm -rf /var/lib/apt/lists/* \
+  && echo "zend_extension=$(find / -name xdebug.so | head -1)" > /usr/local/etc/php/conf.d/ext-xdebug.ini \
+  && echo "extension=$(find / -name geoip.so | head -1)" > /usr/local/etc/php/conf.d/ext-geoip.ini \
+  && echo "extension=$(find / -name memcached.so | head -1)" > /usr/local/etc/php/conf.d/ext-memcached.ini\
+  ${APACHE3}
